@@ -23,7 +23,7 @@
  * can't be added to it with the `include` function.
  */
 
-interface LatLng {
+export interface LatLng {
     lat: number;
     lng: number;
     alt?: number;
