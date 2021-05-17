@@ -1,57 +1,32 @@
 import Autocomplete from 'react-native-autocomplete-input';
-import PropTypes from 'prop-types';
-import React, { Component, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Qwant } from '../api/qwant';
+import { AutocompleteResult } from '../models/AutocompleteResult';
 
-const API = 'https://swapi.dev/api/films/';
-const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
-
-function comp(a, b) {
-  return a.toLowerCase().trim() === b.toLowerCase().trim();
-}
-
-function findMovie(query, movies) {
-  if (query === '') {
-    return [];
-  }
-
-  const regex = new RegExp(`${query.trim()}`, 'i');
-  return movies.filter((film) => film.title.search(regex) >= 0);
-}
-
-const MovieDetails = ({ movie }) => {
-  const { title, director, opening_crawl, episode_id } = movie;
-  const roman = episode_id < ROMAN.length ? ROMAN[episode_id] : episode_id;
-
-  return (
-    <View>
-      <Text style={styles.titleText}>
-        {roman}. {title}
-      </Text>
-      <Text style={styles.directorText}>({director})</Text>
-      <Text style={styles.openingText}>{opening_crawl}</Text>
-    </View>
-  );
-};
-
-MovieDetails.propTypes = {
-  movies: PropTypes.object,
-};
+let api: Qwant = new Qwant();
 
 const TabOneScreen = () => {
-  const [allMovies, setAllMovies] = useState([]);
   const [startQuery, setStartQuery] = useState('');
-  const startMovies = findMovie(startQuery, allMovies);
+  const [startLocations, setStartLocations] = useState([]);
   const [endQuery, setEndQuery] = useState('');
-  const endMovies = findMovie(endQuery, allMovies);
+  const [endLocations, setEndLocations] = useState([]);
 
-  useEffect(() => {
-    fetch(API)
-      .then((res) => res.json())
-      .then(({ results }) => {
-        setAllMovies(results);
+  const fetchStartData = (query) => {
+    api.autocomplete(query)
+      .then((result: AutocompleteResult) => {
+        setStartLocations(result.features
+          .map(x => x.properties.geocoding.label))
       });
-  }, []);
+  }
+
+  const fetchEndData = (query) => {
+    api.autocomplete(query)
+      .then((result: AutocompleteResult) => {
+        setEndLocations(result.features
+          .map(x => x.properties.geocoding.label))
+      });
+  }
 
   return (
     <View style={styles.container}>
@@ -61,16 +36,22 @@ const TabOneScreen = () => {
           autoCapitalize="none"
           autoCorrect={false}
           data={
-            startMovies.length === 1 && comp(startQuery, startMovies[0].title) ? [] : startMovies
+            startLocations
           }
           value={startQuery}
-          onChangeText={setStartQuery}
-          placeholder="Enter Star Wars film title"
+          onChangeText={text => {
+            setStartQuery(text);
+            fetchStartData(text);
+          }}
+          placeholder="e.g. Copenhagen"
           flatListProps={{
-            keyExtractor: (item) => item.episode_id.toString(),
+            keyExtractor: (item, i) => i.toString(),
             renderItem: ({ item, i }) => (
-              <TouchableOpacity onPress={() => setStartQuery(item.title)}>
-                <Text style={styles.itemText}>{item.title}</Text>
+              <TouchableOpacity onPress={() => {
+                setStartQuery(item);
+                setStartLocations([]);
+              }}>
+                <Text style={styles.itemText}>{item}</Text>
               </TouchableOpacity>
             ),
           }}
@@ -80,16 +61,22 @@ const TabOneScreen = () => {
           autoCapitalize="none"
           autoCorrect={false}
           data={
-            endMovies.length === 1 && comp(endQuery, endMovies[0].title) ? [] : endMovies
+            endLocations
           }
           value={endQuery}
-          onChangeText={setEndQuery}
-          placeholder="Enter Star Wars film title"
+          onChangeText={text => {
+            setEndQuery(text);
+            fetchEndData(text);
+          }}
+          placeholder="e.g. Ballerup"
           flatListProps={{
-            keyExtractor: (item) => item.episode_id.toString(),
+            keyExtractor: (item, i) => i.toString(),
             renderItem: ({ item, i }) => (
-              <TouchableOpacity onPress={() => setEndQuery(item.title)}>
-                <Text style={styles.itemText}>{item.title}</Text>
+              <TouchableOpacity onPress={() => {
+                setEndQuery(item);
+                setEndLocations([])
+              }}>
+                <Text style={styles.itemText}>{item}</Text>
               </TouchableOpacity>
             ),
           }}
