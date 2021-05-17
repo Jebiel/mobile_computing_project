@@ -1,5 +1,6 @@
 import { LatLng } from '../models/LatLng';
 import { TravelMode } from '../constants/TravelMode';
+import { AutocompleteResult } from '../models/AutocompleteResult';
 import { DirectionsResult } from '../models/DirectionsResult';
 
 /**
@@ -8,10 +9,10 @@ import { DirectionsResult } from '../models/DirectionsResult';
  * @public
  */
 export class Qwant {
-    queryLimit: number;
-    queryPos?: LatLng;
+    private queryLimit: number;
+    private queryPos?: LatLng;
 
-    baseUrl: string = 'https://www.qwant.com/maps/detail/v1/';
+    private baseUrl: string = 'https://www.qwant.com/maps/detail/v1/';
 
     /**
      * @param queryLimit    - Optional parameter, to specify the desired number of 
@@ -42,9 +43,9 @@ export class Qwant {
      * @param query - E.g. address or place.
      * @public
      */
-    public async autocomplete(query: string): Promise<DirectionsResult> {
+    public async autocomplete(query: string): Promise<AutocompleteResult> {
         // Build the request url
-        let url = this.baseUrl + '/autocomplete';
+        let url = this.baseUrl + 'autocomplete';
 
         // Add the query string
         url += `?q=${query}`;
@@ -59,14 +60,18 @@ export class Qwant {
             url += '&zoom=10.000';
         }
 
+        console.log(url);
+
         // Fetch the data from backend
         let response = await fetch(url, { method: 'GET' });
+
+        console.log(response);
 
         if (response.ok) {
             return JSON.parse(await response.text());
         }
         else {
-            return Promise.reject(Error(`Error in autocomplete, with statuscode ${response.status}`));
+            return null;
         }
     }
 
@@ -80,9 +85,9 @@ export class Qwant {
      * @param query - Input string e.g. address or place.
      * @public
      */
-    public async directions(from: LatLng, to: LatLng, mode: TravelMode) {
+    public async directions(from: LatLng, to: LatLng, mode: TravelMode): Promise<DirectionsResult> {
         // Build the request url
-        let url = this.baseUrl + '/directions/';
+        let url = this.baseUrl + 'directions/';
 
         // Add from and to's coordinates
         url += `${from.lng},${from.lat};${to.lng},${to.lat}/`;

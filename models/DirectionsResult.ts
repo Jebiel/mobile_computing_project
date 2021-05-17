@@ -1,90 +1,52 @@
 export interface DirectionsResult {
-    type:       string;
-    geocoding:  DirectionsResultGeocoding;
-    intentions: any[];
-    features:   Feature[];
+    status: string;
+    data:   Data;
 }
 
-export interface Feature {
-    type:       string;
-    geometry:   Geometry;
-    properties: Properties;
-    distance:   number;
+export interface Data {
+    routes:  Route[];
+    message: null;
+    code:    string;
+}
+
+export interface Route {
+    duration: number;
+    distance: number;
+    carbon:   null;
+    summary:  null;
+    price:    null;
+    legs:     Leg[];
+    geometry: Geometry;
 }
 
 export interface Geometry {
-    coordinates: number[];
+    coordinates: Array<number[]>;
     type:        string;
 }
 
-export interface Properties {
-    geocoding: AddressClass;
+export interface Leg {
+    duration: number;
+    distance: number;
+    summary:  string;
+    steps:    Step[];
+    stops:    any[];
+    info:     null;
+    mode:     string;
+    from:     null;
+    to:       null;
 }
 
-export interface AddressClass {
-    type:                  Type;
-    label:                 string;
-    name:                  string;
-    postcode:              null | string;
-    city:                  any;             // Test this at a later point (City)
-    id:                    string;
-    citycode:              string;
-    administrativeRegions: AdministrativeRegion[];
-    poiTypes?:             PoiType[];
-    properties?:           Property[];
-    address?:              AddressClass;
-    countryCodes:          any[];           // Test this at a later point (CountryCode[])
-    street?:               string;
-    housenumber?:          string;
+export interface Step {
+    maneuver: Maneuver;
+    duration: number;
+    distance: number;
+    geometry: Geometry;
+    mode:     string;
 }
 
-export interface AdministrativeRegion {
-    id:       any;                          // Test this at a later point (ID)
-    insee:    string;
-    level:    number;
-    label:    any;                          // Test this at a later point
-    name:     any;                          // Test this at a later point (AdministrativeRegionName)
-    zipCodes: any[];
-    coord:    Coord;
-    bbox:     number[];
-    zoneType: ZoneType;
-    parentID: any | null;                   // Test this at a later point
-    codes:    Code[];
-}
-
-export interface Code {
-    name:  any;                             // Test this at a later point
-    value: string;
-}
-
-export interface Coord {
-    lon: number;
-    lat: number;
-}
-
-export enum ZoneType {
-    City = "city",
-    Country = "country",
-    State = "state",
-}
-
-export interface PoiType {
-    id:   string;
-    name: string;
-}
-
-export interface Property {
-    key:   string;
-    value: string;
-}
-
-export enum Type {
-    House = "house",
-    Poi = "poi",
-    Street = "street",
-}
-
-export interface DirectionsResultGeocoding {
-    version: string;
-    query:   string;
+export interface Maneuver {
+    location:    number[];
+    modifier:    null;
+    type:        string;
+    instruction: string;
 }
