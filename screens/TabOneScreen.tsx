@@ -4,6 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View, Platform, Button } from 'reac
 import { Qwant } from '../api/qwant';
 import { AutocompleteResult } from '../models/AutocompleteResult';
 import * as Location from 'expo-location';
+Location.installWebGeolocationPolyfill();
 
 let api: Qwant = new Qwant();
 
@@ -30,11 +31,14 @@ const TabOneScreen = () => {
   }
 
   const watchLocation = async () => {
-    const location = await Location.getCurrentPositionAsync();
-    setCurrentLocation({
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude
-    });
+    navigator.geolocation.getCurrentPosition(
+      location => {
+        setCurrentLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude
+      });
+    }
+    ,);
     setTimeout(watchLocation, locationFetchDelay);
   }
 
