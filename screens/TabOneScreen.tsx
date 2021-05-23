@@ -3,14 +3,40 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Platform, Button } from 'react-native';
 import { Qwant } from '../api/qwant';
 import { AutocompleteResult } from '../models/AutocompleteResult';
+import * as Location from 'expo-location';
 
 let api: Qwant = new Qwant();
 
 const TabOneScreen = () => {
+  //Only needed for user input
   const [endQuery, setEndQuery] = useState('');
   const [endLocations, setEndLocations] = useState([]);
   const [features, setFeatures] = useState([]);
-  const [endCoordinates, setEndCoordinates] = useState(undefined);
+
+  const [endCoordinates, setEndCoordinates] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  const locationFetchDelay = 1000; //ms
+
+  const getLocation = async () => {
+    var { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      console.log('Foreground permission not granted!');
+      setErrorMsg('Foreground permission not granted');
+      return;
+    }
+    watchLocation();
+  }
+
+  const watchLocation = async () => {
+    const location = await Location.getCurrentPositionAsync();
+    setCurrentLocation({
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude
+    });
+    setTimeout(watchLocation, locationFetchDelay);
+  }
 
   const fetchFeatures = (query) => {
     api.autocomplete(query)
@@ -30,6 +56,8 @@ const TabOneScreen = () => {
       longitude: featureCoordinates[0].geometry.coordinates[0]
     }
     setEndCoordinates(result);
+    //Start async current location fetching
+    getLocation();
   }
 
   return (
@@ -67,10 +95,22 @@ const TabOneScreen = () => {
           />
         }
       </View>
-      {endCoordinates != undefined &&
+      {endCoordinates != null &&
         <View style={styles.container}>
           <Text>Destination</Text>
           <Text>{JSON.stringify(endCoordinates)}</Text>
+          {currentLocation != null &&
+            <View>
+              <Text>My location</Text>
+              <Text>{JSON.stringify(currentLocation)}</Text>
+            </View>
+          }
+          {currentLocation == null &&
+            <View>
+              <Text>My location</Text>
+              <Text>Fetching current location...</Text>
+            </View>
+          }
         </View>
       }
     </View>
