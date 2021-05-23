@@ -1,61 +1,40 @@
 import Autocomplete from 'react-native-autocomplete-input';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Platform, Button } from 'react-native';
 import { Qwant } from '../api/qwant';
 import { AutocompleteResult } from '../models/AutocompleteResult';
 
 let api: Qwant = new Qwant();
 
 const TabOneScreen = () => {
-  const [startQuery, setStartQuery] = useState('');
-  const [startLocations, setStartLocations] = useState([]);
   const [endQuery, setEndQuery] = useState('');
   const [endLocations, setEndLocations] = useState([]);
+  const [features, setFeatures] = useState([]);
+  const [endCoordinates, setEndCoordinates] = useState(undefined);
 
-  const fetchStartData = (query) => {
+  const fetchFeatures = (query) => {
     api.autocomplete(query)
       .then((result: AutocompleteResult) => {
-        setStartLocations(result.features
-          .map(x => x.properties.geocoding.label))
-      });
-  }
-
-  const fetchEndData = (query) => {
-    api.autocomplete(query)
-      .then((result: AutocompleteResult) => {
+        setFeatures(result.features)
         setEndLocations(result.features
           .map(x => x.properties.geocoding.label))
       });
   }
 
+  const finalizeInput = () => {
+    var featureCoordinates = features.filter(obj => {
+      return obj.properties.geocoding.label === endQuery
+    });
+    var result = {
+      latitude: featureCoordinates[0].geometry.coordinates[1],
+      longitude: featureCoordinates[0].geometry.coordinates[0]
+    }
+    setEndCoordinates(result);
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.autocompleteContainer}>
-        <Text>Starting point</Text>
-        <Autocomplete
-          autoCapitalize="none"
-          autoCorrect={false}
-          data={
-            startLocations
-          }
-          value={startQuery}
-          onChangeText={text => {
-            setStartQuery(text);
-            fetchStartData(text);
-          }}
-          placeholder="e.g. Copenhagen"
-          flatListProps={{
-            keyExtractor: (item, i) => i.toString(),
-            renderItem: ({ item, i }) => (
-              <TouchableOpacity onPress={() => {
-                setStartQuery(item);
-                setStartLocations([]);
-              }}>
-                <Text style={styles.itemText}>{item}</Text>
-              </TouchableOpacity>
-            ),
-          }}
-        />
         <Text>Destination</Text>
         <Autocomplete
           autoCapitalize="none"
@@ -66,7 +45,7 @@ const TabOneScreen = () => {
           value={endQuery}
           onChangeText={text => {
             setEndQuery(text);
-            fetchEndData(text);
+            fetchFeatures(text);
           }}
           placeholder="e.g. Ballerup"
           flatListProps={{
@@ -74,14 +53,26 @@ const TabOneScreen = () => {
             renderItem: ({ item, i }) => (
               <TouchableOpacity onPress={() => {
                 setEndQuery(item);
-                setEndLocations([])
+                setEndLocations([]);
               }}>
                 <Text style={styles.itemText}>{item}</Text>
               </TouchableOpacity>
             ),
           }}
         />
+        {endQuery.length > 0 && endLocations.length == 0 &&
+          <Button
+            onPress={finalizeInput}
+            title="Confirm"
+          />
+        }
       </View>
+      {endCoordinates != undefined &&
+        <View style={styles.container}>
+          <Text>Destination</Text>
+          <Text>{JSON.stringify(endCoordinates)}</Text>
+        </View>
+      }
     </View>
   );
 };
