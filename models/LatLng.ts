@@ -64,6 +64,18 @@ LatLng.prototype = {
 		return distance(this, other);
 	},
 
+	bearingTo: function (other: LatLng) {
+	  let lat1  = this.lat * Math.PI / 180;
+	  let lon1  = this.lng * Math.PI / 180;
+	  let lat2  = other.lat * Math.PI / 180;
+	  let lon2  = other.lng * Math.PI / 180;
+	
+	  let y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+	  let x = Math.cos(lat1) * Math.sin(lat2) -
+			Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+	  return Math.atan2(y, x) * 180 / Math.PI;
+	},
+
 	// @method wrap(): LatLng
 	// Returns a new `LatLng` object with the longitude wrapped so it's always between -180 and +180 degrees.
 	wrap: function () {
