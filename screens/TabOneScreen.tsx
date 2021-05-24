@@ -1,9 +1,12 @@
 import Autocomplete from 'react-native-autocomplete-input';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Platform, Button } from 'react-native';
 import { Qwant } from '../api/qwant';
 import { AutocompleteResult } from '../models/AutocompleteResult';
 import * as Location from 'expo-location';
+import { LatLng } from '../models/LatLng';
+import { DirectionsResult } from '../models/DirectionsResult';
+import { TravelMode } from '../constants/TravelMode';
 Location.installWebGeolocationPolyfill();
 
 let api: Qwant = new Qwant();
@@ -11,14 +14,39 @@ let api: Qwant = new Qwant();
 const TabOneScreen = () => {
   //Only needed for user input
   const [endQuery, setEndQuery] = useState('');
-  const [endLocations, setEndLocations] = useState([]);
+  const [possibleDestinations, setPossibleDestinations] = useState([]);
   const [features, setFeatures] = useState([]);
 
-  const [endCoordinates, setEndCoordinates] = useState(null);
+  const [endLocation, setEndLocation] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [route, setRoute] = useState(null);
+  const [currentStepId, setCurrentStepId] = useState(0);
+  //Start with 1 since 0 is equal to current position
+  const [currentCoordinateId, setCurrentCoordinateId] = useState(1);
+  const [distanceToNextCoordinate, setDistanceToNextCoordinate] = useState(null);
 
-  const locationFetchDelay = 1000; //ms
+  const locationFetchDelay = 2000; //ms
+
+  //Called on currentLocation change
+  useEffect(() => {
+    if (route == null) {
+      fetchRoute();
+    } else {
+      // console.log("From")
+      // console.log(JSON.stringify(currentLocation));
+
+      // console.log("To")
+      // console.log(JSON.stringify(new LatLng(
+      //   route.legs[0].steps[currentStepId].geometry.coordinates[currentCoordinateId][1],
+      //   route.legs[0].steps[currentStepId].geometry.coordinates[currentCoordinateId][0])));
+
+      setDistanceToNextCoordinate(currentLocation.distanceTo(new LatLng(
+        route.legs[0].steps[currentStepId].geometry.coordinates[currentCoordinateId][1],
+        route.legs[0].steps[currentStepId].geometry.coordinates[currentCoordinateId][0]
+      )))
+    }
+  }, [currentLocation]);
 
   const getLocation = async () => {
     var { status } = await Location.requestForegroundPermissionsAsync();
@@ -33,11 +61,8 @@ const TabOneScreen = () => {
   const watchLocation = async () => {
     navigator.geolocation.getCurrentPosition(
       location => {
-        setCurrentLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude
-      });
-    }
+        setCurrentLocation(new LatLng(location.coords.latitude, location.coords.longitude));
+      }
     ,);
     setTimeout(watchLocation, locationFetchDelay);
   }
@@ -46,20 +71,29 @@ const TabOneScreen = () => {
     api.autocomplete(query)
       .then((result: AutocompleteResult) => {
         setFeatures(result.features)
-        setEndLocations(result.features
+        setPossibleDestinations(result.features
           .map(x => x.properties.geocoding.label))
       });
+  }
+
+  const fetchRoute = async () => {
+    if (currentLocation != null && endLocation != null) {
+      console.log("Run")
+      await api.directions(currentLocation, endLocation, TravelMode.walking)
+        .then((result: DirectionsResult) => {
+          // console.log("Result")
+          // console.log(result.data.routes[0])
+          setRoute(result.data.routes[0]);
+        });
+    }
   }
 
   const finalizeInput = () => {
     var featureCoordinates = features.filter(obj => {
       return obj.properties.geocoding.label === endQuery
     });
-    var result = {
-      latitude: featureCoordinates[0].geometry.coordinates[1],
-      longitude: featureCoordinates[0].geometry.coordinates[0]
-    }
-    setEndCoordinates(result);
+    var result = new LatLng(featureCoordinates[0].geometry.coordinates[1], featureCoordinates[0].geometry.coordinates[0]);
+    setEndLocation(result);
     //Start async current location fetching
     getLocation();
   }
@@ -72,7 +106,7 @@ const TabOneScreen = () => {
           autoCapitalize="none"
           autoCorrect={false}
           data={
-            endLocations
+            possibleDestinations
           }
           value={endQuery}
           onChangeText={text => {
@@ -85,24 +119,24 @@ const TabOneScreen = () => {
             renderItem: ({ item, i }) => (
               <TouchableOpacity onPress={() => {
                 setEndQuery(item);
-                setEndLocations([]);
+                setPossibleDestinations([]);
               }}>
                 <Text style={styles.itemText}>{item}</Text>
               </TouchableOpacity>
             ),
           }}
         />
-        {endQuery.length > 0 && endLocations.length == 0 &&
+        {endQuery.length > 0 && possibleDestinations.length == 0 &&
           <Button
             onPress={finalizeInput}
             title="Confirm"
           />
         }
       </View>
-      {endCoordinates != null &&
+      {endLocation != null &&
         <View style={styles.container}>
           <Text>Destination</Text>
-          <Text>{JSON.stringify(endCoordinates)}</Text>
+          <Text>{JSON.stringify(endLocation)}</Text>
           {currentLocation != null &&
             <View>
               <Text>My location</Text>
@@ -113,6 +147,24 @@ const TabOneScreen = () => {
             <View>
               <Text>My location</Text>
               <Text>Fetching current location...</Text>
+            </View>
+          }
+          {route != null &&
+            <View>
+              <Text>Legs count</Text>
+              <Text>{JSON.stringify(route.legs.length)}</Text>
+              <Text>Steps count</Text>
+              <Text>{JSON.stringify(route.legs[0].steps.length)}</Text>
+              <Text>Total Distance</Text>
+              <Text>{JSON.stringify(route.distance)}</Text>
+              <Text>Current step ID</Text>
+              <Text>{currentStepId}</Text>
+              <Text>Current step distance left</Text>
+              <Text>{JSON.stringify(route.legs[0].steps[currentStepId].distance)}</Text>
+              <Text>Current step coordinates left</Text>
+              <Text>{JSON.stringify(route.legs[0].steps[currentStepId].geometry.coordinates.length)}</Text>
+              <Text>Distance to next coordinate</Text>
+              <Text>{distanceToNextCoordinate}</Text>
             </View>
           }
         </View>
