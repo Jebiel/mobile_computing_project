@@ -20,31 +20,15 @@ const TabOneScreen = () => {
   const [endLocation, setEndLocation] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [canFetchRoute, setCanFetchRoute] = useState(true);
   const [route, setRoute] = useState(null);
-  const [currentStepId, setCurrentStepId] = useState(0);
-  //Start with 1 since 0 is equal to current position
-  const [currentCoordinateId, setCurrentCoordinateId] = useState(1);
-  const [distanceToNextCoordinate, setDistanceToNextCoordinate] = useState(null);
 
-  const locationFetchDelay = 2000; //ms
+  const locationFetchDelay = 5000; //ms
 
   //Called on currentLocation change
   useEffect(() => {
-    if (route == null) {
+    if (canFetchRoute) {
       fetchRoute();
-    } else {
-      // console.log("From")
-      // console.log(JSON.stringify(currentLocation));
-
-      // console.log("To")
-      // console.log(JSON.stringify(new LatLng(
-      //   route.legs[0].steps[currentStepId].geometry.coordinates[currentCoordinateId][1],
-      //   route.legs[0].steps[currentStepId].geometry.coordinates[currentCoordinateId][0])));
-
-      setDistanceToNextCoordinate(currentLocation.distanceTo(new LatLng(
-        route.legs[0].steps[currentStepId].geometry.coordinates[currentCoordinateId][1],
-        route.legs[0].steps[currentStepId].geometry.coordinates[currentCoordinateId][0]
-      )))
     }
   }, [currentLocation]);
 
@@ -70,22 +54,26 @@ const TabOneScreen = () => {
   const fetchFeatures = (query) => {
     api.autocomplete(query)
       .then((result: AutocompleteResult) => {
-        setFeatures(result.features)
+        setFeatures(result.features);
         setPossibleDestinations(result.features
-          .map(x => x.properties.geocoding.label))
+          .map(x => x.properties.geocoding.label));
       });
   }
 
   const fetchRoute = async () => {
+    setCanFetchRoute(false);
     if (currentLocation != null && endLocation != null) {
-      console.log("Run")
       await api.directions(currentLocation, endLocation, TravelMode.walking)
         .then((result: DirectionsResult) => {
-          // console.log("Result")
-          // console.log(result.data.routes[0])
           setRoute(result.data.routes[0]);
+        })
+        .catch(error => {
+          console.log(error);
+          setCanFetchRoute(true);
         });
+
     }
+    setCanFetchRoute(true);
   }
 
   const finalizeInput = () => {
@@ -96,12 +84,14 @@ const TabOneScreen = () => {
     setEndLocation(result);
     //Start async current location fetching
     getLocation();
+    //Fetch route to destination
+    fetchRoute();
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.autocompleteContainer}>
-        <Text>Destination</Text>
+        <Text style={styles.itemText}>Destination</Text>
         <Autocomplete
           autoCapitalize="none"
           autoCorrect={false}
@@ -135,36 +125,32 @@ const TabOneScreen = () => {
       </View>
       {endLocation != null &&
         <View style={styles.container}>
-          <Text>Destination</Text>
-          <Text>{JSON.stringify(endLocation)}</Text>
+          <Text style={styles.itemText}>Destination</Text>
+          <Text style={styles.itemText}>{JSON.stringify(endLocation)}</Text>
           {currentLocation != null &&
             <View>
-              <Text>My location</Text>
-              <Text>{JSON.stringify(currentLocation)}</Text>
+              <Text style={styles.itemText}>My location</Text>
+              <Text style={styles.itemText}>{JSON.stringify(currentLocation)}</Text>
             </View>
           }
           {currentLocation == null &&
             <View>
-              <Text>My location</Text>
-              <Text>Fetching current location...</Text>
+              <Text style={styles.itemText}>My location</Text>
+              <Text style={styles.itemText}>Fetching current location...</Text>
             </View>
           }
           {route != null &&
             <View>
-              <Text>Legs count</Text>
-              <Text>{JSON.stringify(route.legs.length)}</Text>
-              <Text>Steps count</Text>
-              <Text>{JSON.stringify(route.legs[0].steps.length)}</Text>
-              <Text>Total Distance</Text>
-              <Text>{JSON.stringify(route.distance)}</Text>
-              <Text>Current step ID</Text>
-              <Text>{currentStepId}</Text>
-              <Text>Current step distance left</Text>
-              <Text>{JSON.stringify(route.legs[0].steps[currentStepId].distance)}</Text>
-              <Text>Current step coordinates left</Text>
-              <Text>{JSON.stringify(route.legs[0].steps[currentStepId].geometry.coordinates.length)}</Text>
-              <Text>Distance to next coordinate</Text>
-              <Text>{distanceToNextCoordinate}</Text>
+              <Text style={styles.itemText}>Steps count</Text>
+              <Text style={styles.itemText}>{JSON.stringify(route.legs[0].steps.length)}</Text>
+              <Text style={styles.itemText}>Total Distance Left</Text>
+              <Text style={styles.itemText}>{JSON.stringify(route.distance)}</Text>
+              <Text style={styles.itemText}>Current step distance left</Text>
+              <Text style={styles.itemText}>{JSON.stringify(route.legs[0].steps[0].distance)}</Text>
+              {route.distance < 10 &&
+                <Text style={styles.infoText}>Destination Reached</Text>
+              }
+
             </View>
           }
         </View>
@@ -194,7 +180,7 @@ const styles = StyleSheet.create({
     })
   },
   itemText: {
-    fontSize: 15,
+    fontSize: 18,
     margin: 2,
   },
   descriptionContainer: {
@@ -204,7 +190,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   infoText: {
+    fontSize: 24,
     textAlign: 'center',
+    margin: 10
   },
   titleText: {
     fontSize: 18,
