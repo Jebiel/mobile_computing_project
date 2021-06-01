@@ -1,72 +1,107 @@
 import Autocomplete from 'react-native-autocomplete-input';
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, Platform, Button } from 'react-native';
 import { Qwant } from '../api/qwant';
 import { AutocompleteResult } from '../models/AutocompleteResult';
+import * as Location from 'expo-location';
+import { LatLng } from '../models/LatLng';
+import { DirectionsResult } from '../models/DirectionsResult';
+import { TravelMode } from '../constants/TravelMode';
+Location.installWebGeolocationPolyfill();
 
 let api: Qwant = new Qwant();
 
 const TabOneScreen = () => {
-  const [startQuery, setStartQuery] = useState('');
-  const [startLocations, setStartLocations] = useState([]);
+  //Only needed for user input
   const [endQuery, setEndQuery] = useState('');
-  const [endLocations, setEndLocations] = useState([]);
+  const [possibleDestinations, setPossibleDestinations] = useState([]);
+  const [features, setFeatures] = useState([]);
 
-  const fetchStartData = (query) => {
+  const [endLocation, setEndLocation] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [canFetchRoute, setCanFetchRoute] = useState(true);
+  const [route, setRoute] = useState(null);
+
+  const locationFetchDelay = 5000; //ms
+
+  //Called on currentLocation change
+  useEffect(() => {
+    if (canFetchRoute) {
+      fetchRoute();
+    }
+  }, [currentLocation]);
+
+  const getLocation = async () => {
+    var { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      console.log('Foreground permission not granted!');
+      setErrorMsg('Foreground permission not granted');
+      return;
+    }
+    watchLocation();
+  }
+
+  const watchLocation = async () => {
+    navigator.geolocation.getCurrentPosition(
+      location => {
+        setCurrentLocation(new LatLng(location.coords.latitude, location.coords.longitude));
+      }
+    ,);
+    setTimeout(watchLocation, locationFetchDelay);
+  }
+
+  const fetchFeatures = (query) => {
     api.autocomplete(query)
       .then((result: AutocompleteResult) => {
-        setStartLocations(result.features
-          .map(x => x.properties.geocoding.label))
+        setFeatures(result.features);
+        setPossibleDestinations(result.features
+          .map(x => x.properties.geocoding.label));
       });
   }
 
-  const fetchEndData = (query) => {
-    api.autocomplete(query)
-      .then((result: AutocompleteResult) => {
-        setEndLocations(result.features
-          .map(x => x.properties.geocoding.label))
-      });
+  const fetchRoute = async () => {
+    setCanFetchRoute(false);
+    if (currentLocation != null && endLocation != null) {
+      await api.directions(currentLocation, endLocation, TravelMode.walking)
+        .then((result: DirectionsResult) => {
+          setRoute(result.data.routes[0]);
+        })
+        .catch(error => {
+          console.log(error);
+          setCanFetchRoute(true);
+        });
+
+    }
+    setCanFetchRoute(true);
+  }
+
+  const finalizeInput = () => {
+    var featureCoordinates = features.filter(obj => {
+      return obj.properties.geocoding.label === endQuery
+    });
+    var result = new LatLng(featureCoordinates[0].geometry.coordinates[1], featureCoordinates[0].geometry.coordinates[0]);
+    setEndLocation(result);
+    //Start async current location fetching
+    getLocation();
+    //Fetch route to destination
+    fetchRoute();
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.autocompleteContainer}>
-        <Text>Starting point</Text>
+        <Text style={styles.itemText}>Destination</Text>
         <Autocomplete
           autoCapitalize="none"
           autoCorrect={false}
           data={
-            startLocations
-          }
-          value={startQuery}
-          onChangeText={text => {
-            setStartQuery(text);
-            fetchStartData(text);
-          }}
-          placeholder="e.g. Copenhagen"
-          flatListProps={{
-            keyExtractor: (item, i) => i.toString(),
-            renderItem: ({ item, i }) => (
-              <TouchableOpacity onPress={() => {
-                setStartQuery(item);
-                setStartLocations([]);
-              }}>
-                <Text style={styles.itemText}>{item}</Text>
-              </TouchableOpacity>
-            ),
-          }}
-        />
-        <Text>Destination</Text>
-        <Autocomplete
-          autoCapitalize="none"
-          autoCorrect={false}
-          data={
-            endLocations
+            possibleDestinations
           }
           value={endQuery}
           onChangeText={text => {
             setEndQuery(text);
-            fetchEndData(text);
+            fetchFeatures(text);
           }}
           placeholder="e.g. Ballerup"
           flatListProps={{
@@ -74,14 +109,52 @@ const TabOneScreen = () => {
             renderItem: ({ item, i }) => (
               <TouchableOpacity onPress={() => {
                 setEndQuery(item);
-                setEndLocations([])
+                setPossibleDestinations([]);
               }}>
                 <Text style={styles.itemText}>{item}</Text>
               </TouchableOpacity>
             ),
           }}
         />
+        {endQuery.length > 0 && possibleDestinations.length == 0 &&
+          <Button
+            onPress={finalizeInput}
+            title="Confirm"
+          />
+        }
       </View>
+      {endLocation != null &&
+        <View style={styles.container}>
+          <Text style={styles.itemText}>Destination</Text>
+          <Text style={styles.itemText}>{JSON.stringify(endLocation)}</Text>
+          {currentLocation != null &&
+            <View>
+              <Text style={styles.itemText}>My location</Text>
+              <Text style={styles.itemText}>{JSON.stringify(currentLocation)}</Text>
+            </View>
+          }
+          {currentLocation == null &&
+            <View>
+              <Text style={styles.itemText}>My location</Text>
+              <Text style={styles.itemText}>Fetching current location...</Text>
+            </View>
+          }
+          {route != null &&
+            <View>
+              <Text style={styles.itemText}>Steps count</Text>
+              <Text style={styles.itemText}>{JSON.stringify(route.legs[0].steps.length)}</Text>
+              <Text style={styles.itemText}>Total Distance Left</Text>
+              <Text style={styles.itemText}>{JSON.stringify(route.distance)}</Text>
+              <Text style={styles.itemText}>Current step distance left</Text>
+              <Text style={styles.itemText}>{JSON.stringify(route.legs[0].steps[0].distance)}</Text>
+              {route.distance < 10 &&
+                <Text style={styles.infoText}>Destination Reached</Text>
+              }
+
+            </View>
+          }
+        </View>
+      }
     </View>
   );
 };
@@ -107,7 +180,7 @@ const styles = StyleSheet.create({
     })
   },
   itemText: {
-    fontSize: 15,
+    fontSize: 18,
     margin: 2,
   },
   descriptionContainer: {
@@ -117,7 +190,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   infoText: {
+    fontSize: 24,
     textAlign: 'center',
+    margin: 10
   },
   titleText: {
     fontSize: 18,

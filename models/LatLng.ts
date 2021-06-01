@@ -61,7 +61,14 @@ LatLng.prototype = {
 	// @method distanceTo(otherLatLng: LatLng): Number
 	// Returns the distance (in meters) to the given `LatLng` calculated using the [Spherical Law of Cosines](https://en.wikipedia.org/wiki/Spherical_law_of_cosines).
 	distanceTo: function (other: LatLng): number {
-		return distance(this, other);
+		var rad = Math.PI / 180,
+		lat1 = this.lat * rad,
+		lat2 = other.lat * rad,
+		sinDLat = Math.sin((other.lat - this.lat) * rad / 2),
+		sinDLon = Math.sin((other.lng - this.lng) * rad / 2),
+		a = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon,
+		c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+		return 6371e3 * c
 	},
 
 	bearingTo: function (other: LatLng) {
@@ -139,18 +146,6 @@ export function wrapLatLng(latlng: LatLng) {
         alt = latlng.alt;
 
     return new LatLng(lat, lng, alt);
-}
-
-// distance between two geographical points using spherical law of cosines approximation
-export function distance(latlng1: LatLng, latlng2: LatLng) {
-    var rad = Math.PI / 180,
-        lat1 = latlng1.lat * rad,
-        lat2 = latlng2.lat * rad,
-        sinDLat = Math.sin((latlng2.lat - latlng1.lat) * rad / 2),
-        sinDLon = Math.sin((latlng2.lng - latlng1.lng) * rad / 2),
-        a = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon,
-        c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return this.R * c;
 }
 
 export function toLatLng(a: any, b: any, c: any) {
