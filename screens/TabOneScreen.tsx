@@ -20,15 +20,46 @@ const TabOneScreen = () => {
   const [endLocation, setEndLocation] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [canFetchRoute, setCanFetchRoute] = useState(true);
   const [route, setRoute] = useState(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [totalDistanceLeft, setTotalDistanceLeft] = useState(null);
+  const [distanceToNextStep, setDistanceToNextStep] = useState(null);
+  //Next point where user needs to switch direction of movement
+  const [nextManeuver, setNextManeuver] = useState(null);
 
-  const locationFetchDelay = 5000; //ms
+  const locationFetchDelay = 1000; //ms
 
   //Called on currentLocation change
   useEffect(() => {
-    if (canFetchRoute) {
+    if (route == null) {
       fetchRoute();
+    } else {
+      setTotalDistanceLeft(currentLocation.distanceTo(endLocation));
+
+      //We use these values if step has not changed
+      let maneuverLocation = route.legs[0].steps[currentStepIndex].maneuver.location;
+      let newDistanceToNextStep = currentLocation.distanceTo(
+        new LatLng(maneuverLocation[1], maneuverLocation[0])
+      );
+      let newCurrentStepIndex = currentStepIndex;
+      let maneuverInstruction = route.legs[0].steps[currentStepIndex].maneuver.instruction;
+
+      //If reached new maneuver point
+      if (newDistanceToNextStep < 10 && currentStepIndex < route.legs[0].steps.length - 1) {
+        newCurrentStepIndex = currentStepIndex + 1;
+        //I update these variables here because otherwise they would be 1 update behind currentStepIndex
+        //For example currentStepIndex switched 1 -> 2, but distanceToNext step would still show distance to steps[1]
+        //instead of distance to next step with index 2. It would be 1 update behind which is not great.
+        maneuverLocation = route.legs[0].steps[newCurrentStepIndex].maneuver.location;
+        newDistanceToNextStep = currentLocation.distanceTo(
+          new LatLng(maneuverLocation[1], maneuverLocation[0])
+        );
+        maneuverInstruction = route.legs[0].steps[newCurrentStepIndex].maneuver.instruction;
+      }
+
+      setDistanceToNextStep(newDistanceToNextStep);
+      setCurrentStepIndex(newCurrentStepIndex);
+      setNextManeuver(maneuverInstruction)
     }
   }, [currentLocation]);
 
@@ -61,7 +92,6 @@ const TabOneScreen = () => {
   }
 
   const fetchRoute = async () => {
-    setCanFetchRoute(false);
     if (currentLocation != null && endLocation != null) {
       await api.directions(currentLocation, endLocation, TravelMode.walking)
         .then((result: DirectionsResult) => {
@@ -69,14 +99,12 @@ const TabOneScreen = () => {
         })
         .catch(error => {
           console.log(error);
-          setCanFetchRoute(true);
         });
-
     }
-    setCanFetchRoute(true);
   }
 
-  const finalizeInput = () => {
+  const startNavigation = () => {
+    resetState();
     var featureCoordinates = features.filter(obj => {
       return obj.properties.geocoding.label === endQuery
     });
@@ -86,6 +114,13 @@ const TabOneScreen = () => {
     getLocation();
     //Fetch route to destination
     fetchRoute();
+  }
+
+  const resetState = () => {
+    setCurrentStepIndex(0);
+    setTotalDistanceLeft(null);
+    setDistanceToNextStep(null);
+    setNextManeuver(null);
   }
 
   return (
@@ -118,8 +153,8 @@ const TabOneScreen = () => {
         />
         {endQuery.length > 0 && possibleDestinations.length == 0 &&
           <Button
-            onPress={finalizeInput}
-            title="Confirm"
+            onPress={startNavigation}
+            title="Start Navigation"
           />
         }
       </View>
@@ -143,11 +178,31 @@ const TabOneScreen = () => {
             <View>
               <Text style={styles.itemText}>Steps count</Text>
               <Text style={styles.itemText}>{JSON.stringify(route.legs[0].steps.length)}</Text>
-              <Text style={styles.itemText}>Total Distance Left</Text>
-              <Text style={styles.itemText}>{JSON.stringify(route.distance)}</Text>
-              <Text style={styles.itemText}>Current step distance left</Text>
-              <Text style={styles.itemText}>{JSON.stringify(route.legs[0].steps[0].distance)}</Text>
-              {route.distance < 10 &&
+              {totalDistanceLeft != null &&
+                <View>
+                  <Text style={styles.itemText}>Total Distance Left</Text>
+                  <Text style={styles.itemText}>{JSON.stringify(totalDistanceLeft)}</Text>
+                </View>
+              }
+              {currentStepIndex != null &&
+                <View>
+                  <Text style={styles.itemText}>Current step index</Text>
+                  <Text style={styles.itemText}>{JSON.stringify(currentStepIndex)}</Text>
+                </View>
+              }
+              {distanceToNextStep != null &&
+                <View>
+                  <Text style={styles.itemText}>Current step distance left</Text>
+                  <Text style={styles.itemText}>{JSON.stringify(distanceToNextStep)}</Text>
+                </View>
+              }
+              {nextManeuver != null &&
+                <View>
+                  <Text style={styles.itemText}>Next maneuver</Text>
+                  <Text style={styles.itemText}>{JSON.stringify(nextManeuver)}</Text>
+                </View>
+              }
+              {totalDistanceLeft != null && totalDistanceLeft < 12 &&
                 <Text style={styles.infoText}>Destination Reached</Text>
               }
 
@@ -180,7 +235,7 @@ const styles = StyleSheet.create({
     })
   },
   itemText: {
-    fontSize: 18,
+    fontSize: 16,
     margin: 2,
   },
   descriptionContainer: {
