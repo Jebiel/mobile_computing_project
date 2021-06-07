@@ -1,55 +1,39 @@
 import * as Location from 'expo-location';
 
-interface PositionCallback { (position: GeolocationPosition): void; }
+interface Handler { remove(): void; };
 
-class LocationModule {
-    private subscriptions: number[];
-    private previousCoordinate: GeolocationCoordinates;
+export class LocationModule {
+    private options: Location.LocationOptions = {
+        accuracy: Location.LocationAccuracy.BestForNavigation,
+        mayShowUserSettingsDialog: true,
+        timeInterval: 0,
+        distanceInterval: 0
+    };
+
+    private subscriptions: Handler[];
 
     constructor() {
-        Location.requestForegroundPermissionsAsync().then()
-            .catch(this.locationErrorHandler);
+        Location.requestForegroundPermissionsAsync().catch(this.locationErrorHandler);
     }
 
     locationErrorHandler(reason: any) {
         throw new Error(`Location was denied! Reason: ${reason}`);
     }
 
-    subscribe(callback: PositionCallback): number {
-        if (this.subscriptions.length == 0) {
-            this.registerCallback((pos) => {
-                this.previousCoordinate = pos.coords;
-            });
-        }
-
-        return this.registerCallback(callback);
+    subscribe(callback: Location.LocationCallback) {
+        Location.watchPositionAsync(this.options, callback)
+            .then((handler) => this.subscriptions.push(handler))
+            .catch(this.subscribeError);
     }
 
-    registerCallback(callback: PositionCallback): number {
-        let options: PositionOptions = {
-            enableHighAccuracy: true,
-            timeout: 0,
-            maximumAge: 0
-        };
+    subscribeError(reason: any) { console.error(reason); }
 
-        let id = navigator.geolocation.watchPosition(
-            callback,
-            this.subscribeError,
-            options);
-
-        this.subscriptions.push(id);
-
-        return id;
-    }
-
-    subscribeError(error: GeolocationPositionError) {
-        console.error(error.message);
+    getLocation(): Promise<Location.LocationObject> {
+        return Location.getCurrentPositionAsync(this.options);
     }
 
     clearSubscriptions() {
-        this.subscriptions.forEach((id: number) => {
-            navigator.geolocation.clearWatch(id);
-        });
+        this.subscriptions.forEach((h: Handler) => h.remove());
     }
 
     stop() { this.clearSubscriptions(); }

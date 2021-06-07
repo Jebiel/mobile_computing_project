@@ -23,44 +23,42 @@
  * can't be added to it with the `include` function.
  */
 
-export interface LatLng {
-    lat: number;
+export class LatLng {
+	lat: number;
     lng: number;
     alt?: number;
-}
 
-export function LatLng(lat: number, lng: number, alt?: number) {
-	if (isNaN(lat) || isNaN(lng)) {
-		throw new Error('Invalid LatLng object: (' + lat + ', ' + lng + ')');
+	constructor(lat: number, lng: number, alt?: number) {
+		if (isNaN(lat) || isNaN(lng)) {
+			throw new Error('Invalid LatLng object: (' + lat + ', ' + lng + ')');
+		}
+	
+		// @property lat: Number
+		// Latitude in degrees
+		this.lat = +lat;
+	
+		// @property lng: Number
+		// Longitude in degrees
+		this.lng = +lng;
+	
+		// @property alt: Number
+		// Altitude in meters (optional)
+		if (alt !== undefined) {
+			this.alt = +alt;
+		}
 	}
 
-	// @property lat: Number
-	// Latitude in degrees
-	this.lat = +lat;
-
-	// @property lng: Number
-	// Longitude in degrees
-	this.lng = +lng;
-
-	// @property alt: Number
-	// Altitude in meters (optional)
-	if (alt !== undefined) {
-		this.alt = +alt;
-	}
-}
-
-LatLng.prototype = {
 	// @method toString(): String
 	// Returns a string representation of the point (for debugging purposes).
-	toString: function (precision?: number) {
+	toString(precision?: number) {
 		return 'LatLng(' +
 		        formatNum(this.lat, precision) + ', ' +
 		        formatNum(this.lng, precision) + ')';
-	},
+	}
 
 	// @method distanceTo(otherLatLng: LatLng): Number
 	// Returns the distance (in meters) to the given `LatLng` calculated using the [Spherical Law of Cosines](https://en.wikipedia.org/wiki/Spherical_law_of_cosines).
-	distanceTo: function (other: LatLng): number {
+	distanceTo(other: LatLng): number {
 		var rad = Math.PI / 180,
 		lat1 = this.lat * rad,
 		lat2 = other.lat * rad,
@@ -69,9 +67,9 @@ LatLng.prototype = {
 		a = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon,
 		c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 		return 6371e3 * c
-	},
+	}
 
-	bearingTo: function (other: LatLng) {
+	bearingTo(other: LatLng) {
 	  let lat1  = this.lat * Math.PI / 180;
 	  let lon1  = this.lng * Math.PI / 180;
 	  let lat2  = other.lat * Math.PI / 180;
@@ -81,18 +79,19 @@ LatLng.prototype = {
 	  let x = Math.cos(lat1) * Math.sin(lat2) -
 			Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
 	  return Math.atan2(y, x) * 180 / Math.PI;
-	},
+	}
 
 	// @method wrap(): LatLng
 	// Returns a new `LatLng` object with the longitude wrapped so it's always between -180 and +180 degrees.
-	wrap: function () {
+	wrap() {
 		return wrapLatLng(this);
-	},
+	}
 
-	clone: function () {
+	clone() {
 		return new LatLng(this.lat, this.lng, this.alt);
 	}
-};
+}
+
 
 // @function isArray(obj): Boolean
 // Compatibility polyfill for [Array.isArray](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array/isArray)

@@ -7,6 +7,7 @@ import { AutocompleteResult } from '../models/AutocompleteResult';
 import * as Location from 'expo-location';
 import { LatLng } from '../models/LatLng';
 import { VibrationModule } from '../components/VibrationModule';
+import { NavigationModule } from '../components/NavigationModule';
 import { DirectionsResult } from '../models/DirectionsResult';
 import { TravelMode } from '../constants/TravelMode';
 
@@ -33,6 +34,8 @@ const TabOneScreen = () => {
   const locationFetchDelay = 1000; //ms
 
   let module = new VibrationModule();
+  let navModule = new NavigationModule();
+
   
   Location.requestForegroundPermissionsAsync().then(
     () => Location.watchHeadingAsync((loc) => module.vibrate(loc.trueHeading))
@@ -72,24 +75,24 @@ const TabOneScreen = () => {
     }
   }, [currentLocation]);
 
-  const getLocation = async () => {
-    var { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      console.log('Foreground permission not granted!');
-      setErrorMsg('Foreground permission not granted');
-      return;
-    }
-    watchLocation();
-  }
+  // const getLocation = async () => {
+  //   var { status } = await Location.requestForegroundPermissionsAsync();
+  //   if (status !== 'granted') {
+  //     console.log('Foreground permission not granted!');
+  //     setErrorMsg('Foreground permission not granted');
+  //     return;
+  //   }
+  //   watchLocation();
+  // }
 
-  const watchLocation = async () => {
-    navigator.geolocation.getCurrentPosition(
-      location => {
-        setCurrentLocation(new LatLng(location.coords.latitude, location.coords.longitude));
-      }
-    ,);
-    setTimeout(watchLocation, locationFetchDelay);
-  }
+  // const watchLocation = async () => {
+  //   navigator.geolocation.getCurrentPosition(
+  //     location => {
+  //       setCurrentLocation(new LatLng(location.coords.latitude, location.coords.longitude));
+  //     }
+  //   ,);
+  //   setTimeout(watchLocation, locationFetchDelay);
+  // }
 
   const fetchFeatures = (query) => {
     api.autocomplete(query)
@@ -100,29 +103,21 @@ const TabOneScreen = () => {
       });
   }
 
-  const fetchRoute = async () => {
-    if (currentLocation != null && endLocation != null) {
-      await api.directions(currentLocation, endLocation, TravelMode.walking)
-        .then((result: DirectionsResult) => {
-          setRoute(result.data.routes[0]);
-        })
-        .catch(error => {
-          console.log(error);
-        });
-    }
-  }
-
   const startNavigation = () => {
     resetState();
+
     var featureCoordinates = features.filter(obj => {
       return obj.properties.geocoding.label === endQuery
     });
-    var result = new LatLng(featureCoordinates[0].geometry.coordinates[1], featureCoordinates[0].geometry.coordinates[0]);
-    setEndLocation(result);
-    //Start async current location fetching
-    getLocation();
-    //Fetch route to destination
-    fetchRoute();
+    var destination = new LatLng(featureCoordinates[0].geometry.coordinates[1], featureCoordinates[0].geometry.coordinates[0]);
+    
+    navModule.startNavigation(destination);
+    
+    // setEndLocation(result);
+    // Start async current location fetching
+    // getLocation();
+    // Fetch route to destination
+    // fetchRoute();
   }
 
   const resetState = () => {
