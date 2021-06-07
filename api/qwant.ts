@@ -2,6 +2,7 @@ import { LatLng } from '../models/LatLng';
 import { TravelMode } from '../constants/TravelMode';
 import { AutocompleteResult } from '../models/AutocompleteResult';
 import { DirectionsResult } from '../models/DirectionsResult';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Class representing a wrapper for QwantMap's apis,
@@ -9,6 +10,7 @@ import { DirectionsResult } from '../models/DirectionsResult';
  * @public
  */
 export class Qwant {
+    private timestamp: number;
     private queryLimit: number;
     private queryPos?: LatLng;
 
@@ -26,6 +28,8 @@ export class Qwant {
     constructor(queryLimit = 7, queryPos?: LatLng) {
         this.queryLimit = queryLimit;
         this.queryPos = queryPos;
+
+        this.timestamp = new Date().getSeconds() - 20;
     }
 
     /**
@@ -86,26 +90,45 @@ export class Qwant {
      * @public
      */
     public async directions(from: LatLng, to: LatLng, mode: TravelMode): Promise<DirectionsResult> {
-        // Build the request url
-        let url = this.baseUrl + 'directions/';
-
-        // Add from and to's coordinates
-        url += `${from.lng},${from.lat};${to.lng},${to.lat}/`;
-
-        // Add default parameters
-        url += '?geometries=geojson&steps=true&alternatives=true&overview=full';
-
-        // Add the travelmode
-        url += `&type=${mode}`;
-
-        // Fetch the data from backend
-        let response = await fetch(url, { method: 'GET' });
-
-        if (response.ok) {
-            return JSON.parse(await response.text());
+        // If not more than 20 seconds ago, since last call, ignore it!
+        if (new Date().getSeconds() - this.timestamp < 20) {
+            console.log('The directions API shouldn\'t be called too often.');
+            return; 
         }
-        else {
-            return Promise.reject(Error(`Error getting directions, with statuscode ${response.status}`));
-        }
+
+        let key = `${from.lat}${from.lng}${to.lat}${to.lng}${mode}`;
+
+        return AsyncStorage.getItem(key).then(
+            async (value) => {
+                if (value == null) {
+                    // Build the request url
+                    let url = this.baseUrl + 'directions/';
+
+                    // Add from and to's coordinates
+                    url += `${from.lng},${from.lat};${to.lng},${to.lat}/`;
+
+                    // Add default parameters
+                    url += '?geometries=geojson&steps=true&alternatives=true&overview=full';
+
+                    // Add the travelmode
+                    url += `&type=${mode}`;
+
+                    // Fetch the data from backend
+                    let response = await fetch(url, { method: 'GET' });
+
+                    if (response.ok) {
+                        this.timestamp = new Date().getSeconds();
+                        let responseText = await response.text();
+                        AsyncStorage.setItem(key, responseText);
+                        return JSON.parse(responseText);
+                    }
+                    else {
+                        return Promise.reject(Error(`Error getting directions, with statuscode ${response.status}`));
+                    }
+                } else {
+                    return JSON.parse(value);
+                }
+            }
+        );
     }
 }

@@ -1,12 +1,15 @@
 import Autocomplete from 'react-native-autocomplete-input';
-import React, { useState, useEffect } from 'react';
+import * as React from 'react'
+import { useState, useEffect }  from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Platform, Button } from 'react-native';
 import { Qwant } from '../api/qwant';
 import { AutocompleteResult } from '../models/AutocompleteResult';
 import * as Location from 'expo-location';
 import { LatLng } from '../models/LatLng';
+import { VibrationModule } from '../components/VibrationModule';
 import { DirectionsResult } from '../models/DirectionsResult';
 import { TravelMode } from '../constants/TravelMode';
+
 Location.installWebGeolocationPolyfill();
 
 let api: Qwant = new Qwant();
@@ -28,6 +31,12 @@ const TabOneScreen = () => {
   const [nextManeuver, setNextManeuver] = useState(null);
 
   const locationFetchDelay = 1000; //ms
+
+  let module = new VibrationModule();
+  
+  Location.requestForegroundPermissionsAsync().then(
+    () => Location.watchHeadingAsync((loc) => module.vibrate(loc.trueHeading))
+  );
 
   //Called on currentLocation change
   useEffect(() => {
