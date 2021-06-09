@@ -12,6 +12,7 @@ export class NavigationModule {
   previousLocation: LatLng;
 
   private get nextLocation(): LatLng {
+    if(this.route.steps.length == 0) { return null; }
     let location = this.route.steps[0].maneuver.location;
     return new LatLng(location[1], location[0]);
   }
@@ -39,11 +40,11 @@ export class NavigationModule {
   }
 
   private handleLocationUpdate(currentLocation: LatLng) {
+    if(this.nextLocation == null) { return; }
     let distanceToNextLocation = currentLocation.distanceTo(this.nextLocation);
 
     if (distanceToNextLocation <= 10) {
       this.route.steps.shift();
-
     }
     else {
       // The heading we should be at ^^

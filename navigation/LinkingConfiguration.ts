@@ -12,12 +12,12 @@ export default {
     screens: {
       Root: {
         screens: {
-          TabOne: {
+          Main: {
             screens: {
               TabOneScreen: 'one',
             },
           },
-          TabTwo: {
+          Help: {
             screens: {
               TabTwoScreen: 'two',
             },
