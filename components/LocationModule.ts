@@ -10,7 +10,7 @@ export class LocationModule {
         distanceInterval: 0
     };
 
-    private subscriptions: Handler[];
+    private subscriptions: Array<Handler> = [];
 
     constructor() {
         Location.requestForegroundPermissionsAsync().catch(this.locationErrorHandler);

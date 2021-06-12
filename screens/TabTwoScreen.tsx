@@ -1,15 +1,41 @@
 import * as React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Button } from 'react-native';
 
-import EditScreenInfo from '../components/layout/EditScreenInfo';
 import { Text, View } from '../components/layout/Themed';
+import { VibrationModule } from '../components/VibrationModule';
 
 export default function TabTwoScreen() {
+  var vibroModule = new VibrationModule();
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tab Two</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="/screens/TabTwoScreen.tsx" />
+      <Text>List of vibration encodings. Press the button to feel the vibration.</Text>
+      <View style={styles.item}>
+        <Button title="Forward" onPress={e => { vibroModule.vibrateForward()}} />
+      </View>
+      <View style={styles.item}>
+        <Text>2 short vibrations</Text>
+      </View>
+
+      <View style={styles.item}>
+        <Button title="Backward" onPress={e => { vibroModule.vibrateBackward()}} />
+      </View>
+      <View style={styles.item}>
+        <Text>3 short vibrations</Text>
+      </View>
+            
+      <View style={styles.item}>
+        <Button title="Left" onPress={e => { vibroModule.vibrateLeft()}} />
+      </View>
+      <View style={styles.item}>
+        <Text>1 long and 1 short vibration</Text>
+      </View>
+
+      <View style={styles.item}>
+        <Button title="Right" onPress={e => { vibroModule.vibrateRigth()}} />
+      </View>
+      <View style={styles.item}>
+        <Text>1 short and 1 long vibration</Text>
+      </View>
     </View>
   );
 }
@@ -17,16 +43,15 @@ export default function TabTwoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start', // if you want to fill rows left to right
+    padding: 10,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
-  },
+  item: {
+    width: '50%', // is 50% of container width
+    padding: 10,
+    paddingVertical: '10%',
+    alignSelf: 'center'
+  }
 });
