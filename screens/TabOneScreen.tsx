@@ -19,7 +19,6 @@ const TabOneScreen = () => {
 
   const [navigationStarted, setNavigationStarted] = useState(false);
 
-  let module = new VibrationModule();
   let navModule = new NavigationModule();
 
   const fetchFeatures = (query) => {
@@ -76,7 +75,7 @@ const TabOneScreen = () => {
           />
         }
         {navigationStarted &&
-          <Arrow />
+            <Arrow />
         }
       </View>
     </View>

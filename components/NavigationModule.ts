@@ -4,12 +4,16 @@ import { LocationObject } from 'expo-location';
 import { Leg } from '../models/DirectionsResult';
 import { LocationModule } from './LocationModule';
 import { TravelMode } from '../constants/TravelMode';
+import { VibrationModule } from './VibrationModule';
 
 export class NavigationModule {
   route: Leg;
   location = new LocationModule();
+  vibroMod = new VibrationModule();
 
   previousLocation: LatLng;
+
+  pointReachedAccuracy: number = 15; //meters
 
   private get nextLocation(): LatLng {
     if(this.route.steps.length == 0) { return null; }
@@ -43,16 +47,16 @@ export class NavigationModule {
     if(this.nextLocation == null) { return; }
     let distanceToNextLocation = currentLocation.distanceTo(this.nextLocation);
 
-    if (distanceToNextLocation <= 10) {
+    if (distanceToNextLocation <= this.pointReachedAccuracy) {
       this.route.steps.shift();
     }
     else {
       // The heading we should be at ^^
       let desiredHeading = currentLocation.bearingTo(this.nextLocation);
-
       let actualHeading = this.previousLocation.bearingTo(currentLocation);
+      let headingDifference = actualHeading - desiredHeading;
 
-
+      this.vibroMod.vibrate(headingDifference);
     }
 
     // Update previousLocation
