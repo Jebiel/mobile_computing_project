@@ -173,7 +173,7 @@ export class VibrationModule {
         this.patternPause = false;
 
         setTimeout(() => {
-            console.log("Near maneuver mode disabled");
+            // console.log("Near maneuver mode disabled");
             this.pauseBetweenPatterns = this.pauseBetweenPatternsInitialValue;
         }, this.nearManeuverModeDuration);
     }
