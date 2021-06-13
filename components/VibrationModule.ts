@@ -17,9 +17,22 @@ export class VibrationModule {
     private maxIntensity: number = 800;
 
     private pauseInPattern: number = 300;
-    private pauseBetweenPatterns: number = 10000;
+    //Will not be changed. Used as reference to set pauseBetweenPatterns value back after exiting near maneuver mode
+    private pauseBetweenPatternsInitialValue: number = 15000;
+    //Changes near maneuver
+    private pauseBetweenPatterns: number = 15000;
+
+    //Near maneuver specific values
+    private pauseBetweenPatternsNearManeuver: number = 3000;
+    private nearManeuverModeDuration: number = this.pauseBetweenPatternsNearManeuver * 3;
+
+    //Vibration type durations
     private shortVibration: number = 150;
     private longVibration: number = 500;
+
+    //References to setTimeout loops. Needs in near maneuver mode
+    private vibrationTimeoutRef = null;
+    private patternTimeoutRef = null;
 
     //Better to replace with associative array like forward: [], backward: []....
     private vibrationPatterns: number[][] = [
@@ -31,48 +44,14 @@ export class VibrationModule {
 
     constructor() { }
 
-    // vibrate(actualHeading: number, desiredHeading: number, mode?: vibrateMode) {
-    //     if (actualHeading < -180 || actualHeading > 360) {
-    //         throw new Error('Wrong input given in vibrate function');
-    //     }
-
-    //     if (this.active) { return; }
-
-    //     // Convert bearing to be in range -180 -> +180
-    //     if (actualHeading > 180) { actualHeading = actualHeading - 360; }
-
-    //     switch (mode) {
-    //         case vibrateMode.LEFT:
-    //             break;
-    //         case vibrateMode.RIGHT:
-    //             break;
-    //         case vibrateMode.FORWARD:
-    //             break;
-    //         case vibrateMode.FORWARD_LEFT:
-    //             break;
-    //         case vibrateMode.FORWARD_RIGHT:
-    //             break;
-    //         case vibrateMode.BACKWARD:
-    //             break;
-    //         case vibrateMode.BACKWARD_LEFT:
-    //             break;
-    //         case vibrateMode.BACKWARD_RIGHT:
-    //             break;
-    //         default:
-    //             // normalize formula: (b-a) * [(x-y) / (z-y)] + a
-    //             // normalizes z in range y to z, to be in range a to b
-    //             let intensity = (this.maxIntensity - this.minIntensity) * (Math.abs(bearing) / 180) + this.minIntensity;
-    //             this.active = true;
-    //             Vibration.vibrate(intensity, false);
-    //             // Enable function again after timeout
-    //             this.setTimeout(intensity);
-    //     }
-    // }
-
     vibrate(heading: number) {
         if (heading < -360 || heading > 360) {
             throw new Error('Wrong input given in vibrate function');
         }
+
+        //normalize formula: (b-a) * [(x-y) / (z-y)] + a
+        //normalizes z in range y to z, to be in range a to b
+        //let intensity = (this.maxIntensity - this.minIntensity) * (Math.abs(bearing) / 180) + this.minIntensity
 
         // Convert bearing to be in range -180 -> +180
         if (heading < -180) {
@@ -94,6 +73,8 @@ export class VibrationModule {
     vibratePattern(mode: VibrationMode) {
         if (this.patternPause) { return; }
         this.patternPause = true;
+        // console.log("Pause: ")
+        // console.log(this.pauseBetweenPatterns)
         switch (mode) {
             case VibrationMode.FORWARD:
                 this.vibrateForward();
@@ -164,10 +145,36 @@ export class VibrationModule {
     }
 
     private setTimeout(time: number) {
-        setTimeout(() => { this.active = false }, time);
+        //Stop previously started timeout if there is one
+        if (this.vibrationTimeoutRef != null) {
+            clearTimeout(this.vibrationTimeoutRef);
+        }
+        this.vibrationTimeoutRef = setTimeout(() => { this.active = false }, time);
     }
 
     private setPatternTimeout(time: number) {
-        setTimeout(() => { this.patternPause = false }, time);
+        //Stop previously started timeout if there is one
+        if (this.patternTimeoutRef != null) {
+            clearTimeout(this.patternTimeoutRef);
+        }
+        this.patternTimeoutRef = setTimeout(() => { this.patternPause = false }, time);
+    }
+
+    decreasePatternPauseForWhile() {
+        // console.log("Near maneuver mode enabled");
+        this.pauseBetweenPatterns = this.pauseBetweenPatternsNearManeuver;
+        if (this.patternTimeoutRef != null) {
+            clearTimeout(this.patternTimeoutRef);
+        }
+        if (this.vibrationTimeoutRef != null) {
+            clearTimeout(this.vibrationTimeoutRef);
+        }
+        this.active = false;
+        this.patternPause = false;
+
+        setTimeout(() => {
+            console.log("Near maneuver mode disabled");
+            this.pauseBetweenPatterns = this.pauseBetweenPatternsInitialValue;
+        }, this.nearManeuverModeDuration);
     }
 }

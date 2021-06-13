@@ -30,7 +30,7 @@ export class NavigationModule {
 
   constructor() { }
 
-  startNavigation(dest: LatLng, headingCallback: Function = null, locationCallback: Function = null) {
+  startNavigation(dest: LatLng, headingCallback: Function = null, pointSwitchedCallback: Function = null, locationCallback: Function = null) {
     this.location.getLocation().then(
       async (loc: LocationObject) => {
         // Fetch route from qwantmaps api.
@@ -44,18 +44,22 @@ export class NavigationModule {
 
         // Start loop
         this.location.subscribe((pos) => {
-          this.handleLocationUpdate(new LatLng(pos.coords.latitude, pos.coords.longitude), headingCallback, locationCallback);
+          this.handleLocationUpdate(new LatLng(pos.coords.latitude, pos.coords.longitude), headingCallback, pointSwitchedCallback, locationCallback);
         });
       }
     );
   }
 
-  private handleLocationUpdate(currentLocation: LatLng, headingCallback: Function = null, locationCallback: Function = null) {
+  private handleLocationUpdate(currentLocation: LatLng, headingCallback: Function = null, pointSwitchedCallback: Function = null, locationCallback: Function = null) {
     if (this.nextLocation == null) { return; }
     let distanceToNextLocation = currentLocation.distanceTo(this.nextLocation);
 
     if (distanceToNextLocation <= this.pointReachedAccuracy) {
       this.route.steps.shift();
+      if(pointSwitchedCallback != null) {
+        pointSwitchedCallback();
+      }
+      this.vibroMod.decreasePatternPauseForWhile();
     }
     else {
       // The heading we should be at ^^
