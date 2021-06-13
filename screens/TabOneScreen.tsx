@@ -18,6 +18,8 @@ const TabOneScreen = () => {
   const [features, setFeatures] = useState([]);
 
   const [navigationStarted, setNavigationStarted] = useState(false);
+  //Heading to final destination
+  const [heading, setHeading] = useState(0);
 
   let navModule = new NavigationModule();
 
@@ -37,7 +39,11 @@ const TabOneScreen = () => {
     });
     var destination = new LatLng(featureCoordinates[0].geometry.coordinates[1], featureCoordinates[0].geometry.coordinates[0]);
 
-    navModule.startNavigation(destination);
+    navModule.startNavigation(destination, handleHeadingUpdate);
+  }
+
+  const handleHeadingUpdate = (heading: number) => {
+    setHeading(heading);
   }
 
   return (
@@ -75,7 +81,7 @@ const TabOneScreen = () => {
           />
         }
         {navigationStarted &&
-            <Arrow />
+            <Arrow heading={heading}/>
         }
       </View>
     </View>

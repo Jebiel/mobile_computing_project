@@ -64,12 +64,8 @@ export class Qwant {
             url += '&zoom=10.000';
         }
 
-        console.log(url);
-
         // Fetch the data from backend
         let response = await fetch(url, { method: 'GET' });
-
-        console.log(response);
 
         if (response.ok) {
             return JSON.parse(await response.text());

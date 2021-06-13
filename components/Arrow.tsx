@@ -1,18 +1,15 @@
 import * as React from 'react';
 import { StyleSheet } from 'react-native';
 
-import { Text, View } from './layout/Themed';
+import { View } from './layout/Themed';
 import { Image } from 'react-native'
 
-export default function Arrow() {
-  //TODO
-  function rotate() {}
-
+export default function Arrow(props) {
   return (
     <View style={styles.container}>
       <Image
         source={require('../assets/images/arrow.png')}
-        style={styles.arrow}
+        style={[styles.arrow, {transform: [{ rotate: props.heading + 'deg' }]}]}
       />
     </View>
   );
@@ -22,8 +19,6 @@ const styles = StyleSheet.create({
   arrow: {
     width: 160,
     height: 160,
-    //Change this property to rotate arrow
-    transform: [{ rotate: '0deg' }]
   },
   container: {
     flex: 1,
