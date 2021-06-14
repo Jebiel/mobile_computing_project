@@ -6,7 +6,7 @@ export class LocationModule {
     private options: Location.LocationOptions = {
         accuracy: Location.LocationAccuracy.BestForNavigation,
         mayShowUserSettingsDialog: true,
-        timeInterval: 0,
+        timeInterval: 1000,
         distanceInterval: 0
     };
 

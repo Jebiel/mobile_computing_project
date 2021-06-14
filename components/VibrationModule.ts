@@ -20,7 +20,7 @@ export class VibrationModule {
     //Will not be changed. Used as reference to set pauseBetweenPatterns value back after exiting near maneuver mode
     private pauseBetweenPatternsInitialValue: number = 15000;
     //Changes near maneuver
-    private pauseBetweenPatterns: number = 15000;
+    private pauseBetweenPatterns: number = this.pauseBetweenPatternsInitialValue;
 
     //Near maneuver specific values
     private pauseBetweenPatternsNearManeuver: number = 3000;
@@ -33,6 +33,9 @@ export class VibrationModule {
     //References to setTimeout loops. Needs in near maneuver mode
     private vibrationTimeoutRef = null;
     private patternTimeoutRef = null;
+
+    //Change to true for demo
+    private debugMode: boolean = true;
 
     //Better to replace with associative array like forward: [], backward: []....
     private vibrationPatterns: number[][] = [
@@ -113,7 +116,9 @@ export class VibrationModule {
     vibrateForward() {
         if (this.active) { return; }
         this.active = true;
-        // console.log("Vibrate forward");
+        if (this.debugMode) {
+            console.log("Vibrate forward");
+        }
         //Pause, vibration, pause, vibration
         Vibration.vibrate(this.vibrationPatterns[0], false);
         // Enable function again after timeout
@@ -123,7 +128,9 @@ export class VibrationModule {
     vibrateBackward() {
         if (this.active) { return; }
         this.active = true;
-        // console.log("Vibrate backward");
+        if (this.debugMode) {
+            console.log("Vibrate backward");
+        }
         Vibration.vibrate(this.vibrationPatterns[1], false);
         this.setTimeout(this.vibrationPatterns[1].reduce((a, b) => a + b, 0));
     }
@@ -131,7 +138,9 @@ export class VibrationModule {
     vibrateLeft() {
         if (this.active) { return; }
         this.active = true;
-        // console.log("Vibrate left");
+        if (this.debugMode) {
+            console.log("Vibrate left");
+        }
         Vibration.vibrate(this.vibrationPatterns[2], false);
         this.setTimeout(this.vibrationPatterns[2].reduce((a, b) => a + b, 0));
     }
@@ -139,7 +148,9 @@ export class VibrationModule {
     vibrateRigth() {
         if (this.active) { return; }
         this.active = true;
-        // console.log("Vibrate right");
+        if (this.debugMode) {
+            console.log("Vibrate right");
+        }
         Vibration.vibrate(this.vibrationPatterns[3], false);
         this.setTimeout(this.vibrationPatterns[3].reduce((a, b) => a + b, 0));
     }
@@ -161,7 +172,9 @@ export class VibrationModule {
     }
 
     decreasePatternPauseForWhile() {
-        // console.log("Near maneuver mode enabled");
+        if (this.debugMode) {
+            console.log("Near maneuver mode enabled");
+        }
         this.pauseBetweenPatterns = this.pauseBetweenPatternsNearManeuver;
         if (this.patternTimeoutRef != null) {
             clearTimeout(this.patternTimeoutRef);
@@ -173,7 +186,9 @@ export class VibrationModule {
         this.patternPause = false;
 
         setTimeout(() => {
-            // console.log("Near maneuver mode disabled");
+            if (this.debugMode) {
+                console.log("Near maneuver mode disabled");
+            }
             this.pauseBetweenPatterns = this.pauseBetweenPatternsInitialValue;
         }, this.nearManeuverModeDuration);
     }
